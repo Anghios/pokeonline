@@ -1,17 +1,21 @@
 """Monitor del servidor multiplayer.
 
 Comprueba de forma continua:
-  1. Si hay conexion TCP con 193.84.49.20:25565
+  1. Si hay conexion TCP con el servidor
   2. Si existe Data/serverinfo.ini y su contenido es el esperado
+
+Ademas permite lanzar Game.exe desde el boton "Jugar!".
 """
 
 import os
 import queue
 import socket
+import subprocess
 import sys
 import threading
 import tkinter as tk
 from tkinter import font as tkfont
+from tkinter import messagebox
 
 HOST = "193.84.49.20"
 PORT = 25565
@@ -22,6 +26,7 @@ INTERVALO_MS = 5000
 BASE_DIR = os.path.dirname(os.path.abspath(
     sys.executable if getattr(sys, "frozen", False) else __file__))
 INI_PATH = os.path.join(BASE_DIR, "Data", "serverinfo.ini")
+GAME_PATH = os.path.join(BASE_DIR, "Game.exe")
 
 CONTENIDO_ESPERADO = {"HOST": HOST, "PORT": str(PORT)}
 
@@ -32,6 +37,7 @@ CARD_BORDE = "#2b3040"
 TXT = "#e6e8ef"
 TXT_SUAVE = "#8b90a3"
 VERDE = "#3ddc84"
+VERDE_OSCURO = "#2fae68"
 ROJO = "#ff5c5c"
 AMBAR = "#ffb340"
 
@@ -49,6 +55,7 @@ def comprobar_ini():
     """Devuelve (estado, mensaje).
 
     estado: 'ok' | 'malo' | 'falta'
+    Los mensajes no revelan la direccion del servidor.
     """
     if not os.path.isfile(INI_PATH):
         return "falta", "Juego no preparado para jugar online"
@@ -56,8 +63,8 @@ def comprobar_ini():
     try:
         with open(INI_PATH, "r", encoding="utf-8-sig") as f:
             lineas = f.read().splitlines()
-    except OSError as e:
-        return "malo", f"No se pudo leer serverinfo.ini ({e.strerror})"
+    except OSError:
+        return "malo", "No se pudo leer la configuracion"
 
     valores = {}
     for linea in lineas:
@@ -70,11 +77,8 @@ def comprobar_ini():
         valores[clave.strip().upper()] = valor.strip()
 
     for clave, esperado in CONTENIDO_ESPERADO.items():
-        actual = valores.get(clave)
-        if actual is None:
-            return "malo", f"Falta '{clave}' en serverinfo.ini"
-        if actual != esperado:
-            return "malo", f"{clave} incorrecto: '{actual}' (esperado '{esperado}')"
+        if valores.get(clave) != esperado:
+            return "malo", "Configuracion de servidor incorrecta"
 
     return "ok", "Juego preparado para jugar online"
 
@@ -82,7 +86,7 @@ def comprobar_ini():
 class Tarjeta(tk.Frame):
     """Tarjeta con titulo, punto de estado y texto de estado."""
 
-    def __init__(self, padre, titulo, subtitulo):
+    def __init__(self, padre, titulo):
         super().__init__(padre, bg=CARD, highlightbackground=CARD_BORDE,
                          highlightthickness=1, bd=0)
 
@@ -91,7 +95,7 @@ class Tarjeta(tk.Frame):
                  anchor="w").pack(fill="x", padx=18, pady=(14, 0))
 
         fila = tk.Frame(self, bg=CARD)
-        fila.pack(fill="x", padx=18, pady=(6, 0))
+        fila.pack(fill="x", padx=18, pady=(6, 16))
 
         self.punto = tk.Canvas(fila, width=14, height=14, bg=CARD,
                                highlightthickness=0)
@@ -102,19 +106,12 @@ class Tarjeta(tk.Frame):
         self.estado = tk.Label(fila, text="Comprobando...", bg=CARD, fg=TXT,
                                font=tkfont.Font(family="Segoe UI", size=13,
                                                 weight="bold"),
-                               anchor="w", justify="left", wraplength=380)
+                               anchor="w", justify="left", wraplength=370)
         self.estado.pack(side="left", padx=(10, 0), fill="x", expand=True)
 
-        self.detalle = tk.Label(self, text=subtitulo, bg=CARD, fg=TXT_SUAVE,
-                                font=tkfont.Font(family="Segoe UI", size=9),
-                                anchor="w", justify="left", wraplength=400)
-        self.detalle.pack(fill="x", padx=18, pady=(4, 16))
-
-    def actualizar(self, texto, color, detalle=None):
+    def actualizar(self, texto, color):
         self.estado.config(text=texto, fg=color)
         self.punto.itemconfig(self._circulo, fill=color)
-        if detalle is not None:
-            self.detalle.config(text=detalle)
 
 
 class App(tk.Tk):
@@ -125,24 +122,28 @@ class App(tk.Tk):
         self.resizable(False, False)
         self.minsize(470, 0)
 
-        cab = tk.Frame(self, bg=BG)
-        cab.pack(fill="x", padx=24, pady=(22, 4))
-        tk.Label(cab, text="Estado del multijugador", bg=BG, fg=TXT,
+        tk.Label(self, text="Estado del multijugador", bg=BG, fg=TXT,
                  font=tkfont.Font(family="Segoe UI", size=16, weight="bold"),
-                 anchor="w").pack(fill="x")
-        tk.Label(cab, text=f"{HOST}:{PORT}", bg=BG, fg=TXT_SUAVE,
-                 font=tkfont.Font(family="Consolas", size=9),
-                 anchor="w").pack(fill="x")
+                 anchor="w").pack(fill="x", padx=24, pady=(22, 0))
 
-        self.tarjeta_red = Tarjeta(self, "Conexion", f"Puerto TCP {PORT}")
+        self.tarjeta_red = Tarjeta(self, "Conexion")
         self.tarjeta_red.pack(fill="x", padx=24, pady=(16, 10))
 
-        self.tarjeta_ini = Tarjeta(self, "Configuracion local",
-                                   os.path.join("Data", "serverinfo.ini"))
+        self.tarjeta_ini = Tarjeta(self, "Configuracion local")
         self.tarjeta_ini.pack(fill="x", padx=24)
 
+        self.boton_jugar = tk.Button(self, text="Jugar!", command=self.jugar,
+                                     bg=VERDE, fg="#0d2018",
+                                     activebackground=VERDE_OSCURO,
+                                     activeforeground="#0d2018",
+                                     bd=0, relief="flat", pady=11,
+                                     cursor="hand2",
+                                     font=tkfont.Font(family="Segoe UI",
+                                                      size=12, weight="bold"))
+        self.boton_jugar.pack(fill="x", padx=24, pady=(16, 0))
+
         pie = tk.Frame(self, bg=BG)
-        pie.pack(fill="x", padx=24, pady=(14, 16), side="bottom")
+        pie.pack(fill="x", padx=24, pady=(12, 16))
 
         self.boton = tk.Button(pie, text="Comprobar ahora",
                                command=self.comprobar,
@@ -166,6 +167,18 @@ class App(tk.Tk):
         self._cola = queue.Queue()
         self.comprobar()
         self._vaciar_cola()
+
+    def jugar(self):
+        """Lanza Game.exe desde la carpeta de la aplicacion."""
+        if not os.path.isfile(GAME_PATH):
+            messagebox.showerror("Jugar",
+                                 "No se encuentra Game.exe en la carpeta "
+                                 "del juego.")
+            return
+        try:
+            subprocess.Popen([GAME_PATH], cwd=BASE_DIR)
+        except OSError as e:
+            messagebox.showerror("Jugar", f"No se pudo abrir Game.exe:\n{e}")
 
     def comprobar(self):
         if self._trabajando:
@@ -192,15 +205,12 @@ class App(tk.Tk):
 
     def _pintar(self, online, estado_ini, msg_ini):
         if online:
-            self.tarjeta_red.actualizar("Servidor multiplayer online", VERDE,
-                                        f"Conexion establecida con {HOST}:{PORT}")
+            self.tarjeta_red.actualizar("Servidor multiplayer online", VERDE)
         else:
-            self.tarjeta_red.actualizar("Servidor multiplayer offline", ROJO,
-                                        f"Sin respuesta de {HOST}:{PORT}")
+            self.tarjeta_red.actualizar("Servidor multiplayer offline", ROJO)
 
         colores = {"ok": VERDE, "malo": AMBAR, "falta": ROJO}
-        detalle = INI_PATH if estado_ini != "falta" else f"No encontrado: {INI_PATH}"
-        self.tarjeta_ini.actualizar(msg_ini, colores[estado_ini], detalle)
+        self.tarjeta_ini.actualizar(msg_ini, colores[estado_ini])
 
         self._trabajando = False
         self.boton.config(state="normal", text="Comprobar ahora")
