@@ -14,13 +14,23 @@ import subprocess
 import sys
 import threading
 import tkinter as tk
+import webbrowser
 from tkinter import font as tkfont
 from tkinter import messagebox
+
+try:
+    from PIL import Image, ImageTk
+except ImportError:  # sin Pillow la app funciona, solo se queda sin banner
+    Image = ImageTk = None
+
+VERSION = "0.1.0"
+GITHUB_URL = "https://github.com/Anghios/pokeonline"
 
 HOST = "193.84.49.20"
 PORT = 25565
 TIMEOUT = 3.0
 INTERVALO_MS = 5000
+ANCHO = 470
 
 # Carpeta donde vive la app: junto al .py o junto al .exe si se empaqueta.
 # De aqui cuelgan los archivos del juego (editables por el usuario).
@@ -33,6 +43,7 @@ GAME_PATH = os.path.join(BASE_DIR, "Game.exe")
 # una carpeta temporal, asi que no es la misma ruta que BASE_DIR.
 RES_DIR = getattr(sys, "_MEIPASS", BASE_DIR)
 ICON_PATH = os.path.join(RES_DIR, "images", "icono.ico")
+BANNER_PATH = os.path.join(RES_DIR, "images", "banner.jpg")
 
 CONTENIDO_ESPERADO = {"HOST": HOST, "PORT": str(PORT)}
 
@@ -47,6 +58,8 @@ VERDE_OSCURO = "#2fae68"
 ROJO = "#ff5c5c"
 AMBAR = "#ffb340"
 AMBAR_OSCURO = "#e09a2e"
+GH = "#24292f"
+GH_CLARO = "#3a4149"
 
 
 def comprobar_servidor():
@@ -137,13 +150,10 @@ class App(tk.Tk):
         self.resizable(False, False)
         self.minsize(470, 0)
         self._poner_icono()
-
-        tk.Label(self, text="Estado del multijugador", bg=BG, fg=TXT,
-                 font=tkfont.Font(family="Segoe UI", size=16, weight="bold"),
-                 anchor="w").pack(fill="x", padx=24, pady=(22, 0))
+        self._poner_banner()
 
         self.tarjeta_red = Tarjeta(self, "Conexion")
-        self.tarjeta_red.pack(fill="x", padx=24, pady=(16, 10))
+        self.tarjeta_red.pack(fill="x", padx=24, pady=(18, 10))
 
         self.tarjeta_ini = Tarjeta(self, "Configuracion local")
         self.tarjeta_ini.pack(fill="x", padx=24)
@@ -171,21 +181,20 @@ class App(tk.Tk):
         self.boton_jugar.pack(fill="x", padx=24, pady=(16, 0))
 
         pie = tk.Frame(self, bg=BG)
-        pie.pack(fill="x", padx=24, pady=(12, 16))
+        pie.pack(fill="x", padx=24, pady=(14, 16))
 
-        self.boton = tk.Button(pie, text="Comprobar ahora",
-                               command=self.comprobar,
-                               bg=CARD, fg=TXT, activebackground=CARD_BORDE,
-                               activeforeground=TXT, bd=0, relief="flat",
-                               padx=14, pady=7, cursor="hand2",
+        tk.Label(pie, text=f"v{VERSION}", bg=BG, fg=TXT_SUAVE,
+                 font=tkfont.Font(family="Segoe UI", size=9),
+                 anchor="w").pack(side="left", pady=(4, 0))
+
+        self.enlace = tk.Label(pie, text="  GitHub  ↗  ", bg=GH, fg=TXT,
+                               cursor="hand2", padx=6, pady=4,
                                font=tkfont.Font(family="Segoe UI", size=9,
                                                 weight="bold"))
-        self.boton.pack(side="right")
-
-        self.pie_txt = tk.Label(pie, text="", bg=BG, fg=TXT_SUAVE,
-                                font=tkfont.Font(family="Segoe UI", size=8),
-                                anchor="w")
-        self.pie_txt.pack(side="left", pady=(6, 0))
+        self.enlace.pack(side="right")
+        self.enlace.bind("<Button-1>", lambda _e: self.abrir_github())
+        self.enlace.bind("<Enter>", lambda _e: self.enlace.config(bg=GH_CLARO))
+        self.enlace.bind("<Leave>", lambda _e: self.enlace.config(bg=GH))
 
         self._ajustar_alto()
 
@@ -197,7 +206,25 @@ class App(tk.Tk):
     def _ajustar_alto(self):
         """Ancho fijo, alto al contenido (cambia al aparecer el parche)."""
         self.update_idletasks()
-        self.geometry(f"470x{self.winfo_reqheight()}")
+        self.geometry(f"{ANCHO}x{self.winfo_reqheight()}")
+
+    def _poner_banner(self):
+        """Banner a lo ancho de la ventana. Sin Pillow no se puede leer
+        un .jpg, asi que en ese caso simplemente no se muestra."""
+        if Image is None or not os.path.isfile(BANNER_PATH):
+            return
+        try:
+            im = Image.open(BANNER_PATH)
+            alto = round(im.height * ANCHO / im.width)
+            im = im.resize((ANCHO, alto), Image.LANCZOS)
+            # se guarda en el objeto: si se recolecta, tkinter la borra
+            self._banner = ImageTk.PhotoImage(im)
+        except OSError:
+            return
+        tk.Label(self, image=self._banner, bg=BG, bd=0).pack()
+
+    def abrir_github(self):
+        webbrowser.open_new_tab(GITHUB_URL)
 
     def _mostrar_parche(self, visible):
         if visible == self.boton_parche.winfo_ismapped():
@@ -242,8 +269,6 @@ class App(tk.Tk):
         if self._trabajando:
             return
         self._trabajando = True
-        self.boton.config(state="disabled", text="Comprobando...")
-        self.pie_txt.config(text="Comprobando...")
         threading.Thread(target=self._trabajo, daemon=True).start()
 
     def _trabajo(self):
@@ -272,9 +297,6 @@ class App(tk.Tk):
         self._mostrar_parche(estado_ini != "ok")
 
         self._trabajando = False
-        self.boton.config(state="normal", text="Comprobar ahora")
-        self.pie_txt.config(
-            text=f"Actualizacion automatica cada {INTERVALO_MS // 1000} s")
         self.after(INTERVALO_MS, self.comprobar)
 
 
