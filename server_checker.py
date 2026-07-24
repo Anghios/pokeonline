@@ -200,6 +200,8 @@ class App(tk.Tk):
 
         self._trabajando = False
         self._cola = queue.Queue()
+        # ids de los dos temporizadores, para cancelarlos al cerrar
+        self._id_cola = self._id_ciclo = None
         self.comprobar()
         self._vaciar_cola()
 
@@ -264,6 +266,17 @@ class App(tk.Tk):
             subprocess.Popen([GAME_PATH], cwd=BASE_DIR)
         except OSError as e:
             messagebox.showerror("Jugar", f"No se pudo abrir Game.exe:\n{e}")
+            return
+        # el juego ya corre por su cuenta: el lanzador sobra
+        self.cerrar()
+
+    def cerrar(self):
+        """Cancela las comprobaciones pendientes y cierra la ventana."""
+        for ident in (self._id_cola, self._id_ciclo):
+            if ident is not None:
+                self.after_cancel(ident)
+        self._id_cola = self._id_ciclo = None
+        self.destroy()
 
     def comprobar(self):
         if self._trabajando:
@@ -284,7 +297,7 @@ class App(tk.Tk):
                 self._pintar(*self._cola.get_nowait())
         except queue.Empty:
             pass
-        self.after(150, self._vaciar_cola)
+        self._id_cola = self.after(150, self._vaciar_cola)
 
     def _pintar(self, online, estado_ini, msg_ini):
         if online:
@@ -297,7 +310,7 @@ class App(tk.Tk):
         self._mostrar_parche(estado_ini != "ok")
 
         self._trabajando = False
-        self.after(INTERVALO_MS, self.comprobar)
+        self._id_ciclo = self.after(INTERVALO_MS, self.comprobar)
 
 
 if __name__ == "__main__":
