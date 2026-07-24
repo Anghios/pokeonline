@@ -52,8 +52,23 @@ Al abrirla verás dos indicadores:
 Si el juego todavía no está parcheado, aparece un botón **Parchear juego**. Púlsalo,
 las dos luces se ponen en verde y ya puedes darle a **Jugar!**.
 
+## ⚠️ Compatibilidad: comprueba tu versión antes de nada
+
+Esto **no funciona con cualquier versión del juego**. Solo sirve en las versiones
+donde el modo multijugador se activa mediante **dos NPC dentro del Centro Pokémon**.
+
+Cómo saberlo: entra en un Centro Pokémon y mira si hay **dos NPC** que dan acceso al
+online (batallas e intercambios). Si están ahí, vas bien. Si tu versión gestiona el
+multijugador por otra vía —a través de librerías, sin esos NPC— **la app no te va a
+servir de momento**: puedes parchearla y aun así el juego no conectará.
+
+> Se trabajará en el futuro para poder parchear también esas versiones. Por ahora,
+> la compatibilidad se limita a las de los dos NPC.
+
 ## Instalación
 
+0. Asegúrate de que tu versión es compatible (los **dos NPC** del Centro Pokémon,
+   ver arriba).
 1. Descarga `PokeOnline.exe` desde la [última release](https://github.com/Anghios/pokeonline/releases).
 2. **Cópialo dentro de la carpeta del juego**, junto a `Game.exe`. Esto es
    importante: la app busca el juego y escribe la configuración en su propia
@@ -120,6 +135,12 @@ servidor, así que los dos necesitáis parchear el juego.
 Puede estar caído puntualmente. La app reintenta sola cada pocos segundos, así que
 déjala abierta un momento. Si sigue así un buen rato, abre una
 [issue](https://github.com/Anghios/pokeonline/issues).
+
+**La app está todo en verde, pero dentro del juego no puedo conectar.**
+Lo más probable es que tu versión no sea de las compatibles. La app solo comprueba
+que el servidor responda y que la configuración esté escrita; no puede saber si tu
+versión del juego usa el sistema de los **dos NPC** del Centro Pokémon. Si el
+multijugador de tu copia va por librerías, todavía no está soportado.
 
 **¿Puedo volver atrás?**
 Borra `Data\serverinfo.ini`.
