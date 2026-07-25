@@ -16,6 +16,7 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 NOMBRE = "PokeOnline"
 ICONO = os.path.join("images", "icono.ico")
 BANNER = os.path.join("images", "banner.jpg")
+BANNER_GRACIAS = os.path.join("images", "agradecimientos.jpg")
 
 
 def main():
@@ -31,7 +32,7 @@ def main():
         sys.exit("Falta Pillow (hace falta para el banner). Instalalo con:"
                  "\n\n    pip install pillow\n")
 
-    for recurso in (ICONO, BANNER):
+    for recurso in (ICONO, BANNER, BANNER_GRACIAS):
         if not os.path.isfile(os.path.join(AQUI, recurso)):
             sys.exit(f"No se encuentra el recurso: {recurso}")
 
@@ -43,9 +44,10 @@ def main():
         "--windowed",          # sin ventana de consola detras
         "--name", NOMBRE,
         "--icon", ICONO,
-        # icono y banner viajan dentro del exe
+        # icono y banners viajan dentro del exe
         "--add-data", f"{ICONO};images",
         "--add-data", f"{BANNER};images",
+        "--add-data", f"{BANNER_GRACIAS};images",
         "server_checker.py",
     ]
 

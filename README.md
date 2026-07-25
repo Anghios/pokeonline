@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/versión-0.1.0-3ddc84?style=flat-square" alt="versión 0.1.0">
+  <img src="https://img.shields.io/badge/versión-0.1.1-3ddc84?style=flat-square" alt="versión 0.1.1">
   <img src="https://img.shields.io/badge/plataforma-Windows-2b3040?style=flat-square" alt="Windows">
   <img src="https://img.shields.io/badge/python-3.10%2B-2b3040?style=flat-square" alt="Python 3.10+">
 </p>
@@ -51,6 +51,18 @@ Al abrirla verás dos indicadores:
 
 Si el juego todavía no está parcheado, aparece un botón **Parchear juego**. Púlsalo,
 las dos luces se ponen en verde y ya puedes darle a **Jugar!**.
+
+Al abrir la app también comprueba en GitHub si hay una versión más nueva. Si la hay,
+sale un aviso arriba: púlsalo y te lleva directo a la descarga. Si no hay red, o
+todavía no hay ninguna versión nueva, el aviso simplemente no aparece.
+
+Abajo, junto al enlace de GitHub, hay tres botones más:
+
+- **Donaciones** — si te apetece invitar a algo al que paga el servidor.
+- **Gracias** — a quién hay que agradecerle que esto exista.
+- **Changelog** — historial de cambios en dos columnas: **[APP]** a la izquierda
+  (este lanzador) y **[SERVERSIDE]** a la derecha (el servidor multijugador), porque
+  cada uno se actualiza por su cuenta.
 
 ## ⚠️ Compatibilidad: comprueba tu versión antes de nada
 
